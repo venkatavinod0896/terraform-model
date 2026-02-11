@@ -1,4 +1,4 @@
-name: Terraform CI/CD
+name: Terraform Dev Deployment
 
 on:
   push:
@@ -7,51 +7,42 @@ on:
 
 jobs:
   terraform:
+    name: Terraform Dev
     runs-on: ubuntu-latest
-    env:
-      AWS_REGION: us-west-2
+
+    defaults:
+      run:
+        working-directory: environment/dev
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      # 1️⃣ Checkout repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
+      # 2️⃣ Setup Terraform
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.7.0
+        uses: hashicorp/setup-terraform@v3
 
+      # 3️⃣ Configure AWS Credentials
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: us-east-1
 
-      # ---------------------------
-      # Step 1: Bootstrap backend
-      # ---------------------------
-      - name: Terraform Bootstrap Init & Apply
-        working-directory: ./environment/global/backend-bootstrap
-        run: |
-          terraform init
-          terraform apply -auto-approve
+      # 4️⃣ Terraform Init
+      - name: Terraform Init
+        run: terraform init -input=false
 
-      # ---------------------------
-      # Step 2: Deploy dev environment
-      # ---------------------------
-      - name: Terraform Dev Init & Apply
-        working-directory: ./environment/dev
-        run: |
-          terraform init
-          terraform plan -out=tfplan
-          terraform apply -auto-approve tfplan
+      # 5️⃣ Terraform Validate
+      - name: Terraform Validate
+        run: terraform validate
 
-      # ---------------------------
-      # Step 3: (Optional) Deploy prod environment
-      # ---------------------------
-      # - name: Terraform Prod Init & Apply
-      #   working-directory: ./environment/prod
-      #   run: |
-      #     terraform init
-      #     terraform plan -out=tfplan
-      #     terraform apply -auto-approve tfplan
+      # 6️⃣ Terraform Plan
+      - name: Terraform Plan
+        run: terraform plan -input=false
+
+      # 7️⃣ Terraform Apply
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false
